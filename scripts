@@ -1,0 +1,48 @@
+async function bulkCreateEmails(prefix, start, end, domain) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error("❌ 未在 LocalStorage 中找到 token，请确认您已处于登录状态！");
+        return;
+    }
+
+    console.log(`🚀 开始批量创建邮箱，范围: ${prefix}${start}@${domain} 至 ${prefix}${end}@${domain}`);
+    
+    for (let i = start; i <= end; i++) {
+        const emailAddress = `${prefix}${i}@${domain}`;
+        const payload = {
+            email: emailAddress,
+            token: ""
+        };
+
+        // 完美复刻刚才拦截成功的真实请求头
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*',
+            'Authorization': token, // 直接传输原始 Token 字符串，不加任何前缀
+            'accept-language': 'zh'
+        };
+
+        try {
+            const response = await fetch('/api/account/add', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (response.ok && (result.code === 200 || result.code === 0 || result.success !== false)) {
+                console.log(`%c[成功] 已创建: ${emailAddress}`, "color: green; font-weight: bold;");
+            } else {
+                console.error(`❌ [失败] 创建 ${emailAddress} 失败，原因:`, result.message || result.msg || response.statusText);
+            }
+        } catch (error) {
+            console.error(`❌ [错误] 请求 ${emailAddress} 时发生异常:`, error);
+        }
+
+        // 每次请求停顿 500 毫秒
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    console.log('%c🎉 所有批量创建任务已执行完毕！现在请手动刷新网页查看左侧列表。', "color: blue; font-weight: bold; font-size: 14px;");
+}
